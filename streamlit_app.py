@@ -72,6 +72,17 @@ def init_database():
             completed_at TIMESTAMP
         )
     ''')
+    
+    # Verificar se a coluna completed_at existe, se não, adicionar
+    cursor.execute("PRAGMA table_info(downloads)")
+    columns = [column[1] for column in cursor.fetchall()]
+    
+    if 'completed_at' not in columns:
+        cursor.execute('ALTER TABLE downloads ADD COLUMN completed_at TIMESTAMP')
+    
+    if 'format_type' not in columns:
+        cursor.execute('ALTER TABLE downloads ADD COLUMN format_type TEXT DEFAULT "video"')
+    
     conn.commit()
     conn.close()
 
@@ -366,7 +377,17 @@ downloads = get_downloads()
 
 if downloads:
     for download in downloads:
-        download_id, url, title, platform, format_type, status, progress, filename, file_size, error_message, created_at, completed_at = download
+        # Lidar com diferentes estruturas de banco
+        if len(download) == 12:
+            download_id, url, title, platform, format_type, status, progress, filename, file_size, error_message, created_at, completed_at = download
+        elif len(download) == 11:
+            download_id, url, title, platform, format_type, status, progress, filename, file_size, error_message, created_at = download
+            completed_at = None
+        else:
+            # Estrutura mais antiga
+            download_id, url, title, platform, status, progress, filename, file_size, error_message, created_at = download[:10]
+            format_type = 'video'
+            completed_at = None
         
         # Container para cada download
         with st.container():
